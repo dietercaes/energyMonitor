@@ -4,7 +4,7 @@ Connect the following pins to your seeeduino xiao:
 VIO to 3V3
 GND to GND
 INT to D3
-POL to D4
+POL to 10
 CLR to D6
 button to D8 and GND
 display:
@@ -17,7 +17,7 @@ VCC to 5V
 #include <LiquidCrystal_I2C.h>
 
 #define INT 3
-#define POL 4
+#define POL 10
 #define CLR 6
 
 LiquidCrystal_I2C lcd(0x20,16,2);  // set the LCD address to 0x20 for a 16 chars and 2 line display
