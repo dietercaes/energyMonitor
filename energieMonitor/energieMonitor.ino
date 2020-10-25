@@ -1,30 +1,33 @@
 /* 
-There are two methods you can use to keep track of the INT pulses. You
-can use an interrupt input to monitor the INT signal in the background,
-or you can monitor the INT line yourself and use the CLR signal to reset
-the LTC4150 for the next pulse.
+Connect the following pins to your seeeduino xiao:
 
-Connect the following pins to your Arduino:
-
-VIO to VCC
+VIO to 3V3
 GND to GND
 INT to D3
 POL to D4
 CLR to D6
+button to D8 and GND
+display:
+SDA to A4
+SCL to A5
+GND to GND
+VCC to 5V
 */
-
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 
 #define INT 3
 #define POL 4
 #define CLR 6
+
+LiquidCrystal_I2C lcd(0x20,16,2);  // set the LCD address to 0x20 for a 16 chars and 2 line display
 
 // Change the following line to match your battery capacity in mAh.
 double BATTERYCAPACITY = 1000.0;
 // Change the following line to the percentage of charge your battery has at the start.
 double BATTERYINITIALCHARGE = 100.0;
 
-#define LED 13 // Standard Arduino LED
-const int button = 7;
+const int button = 8;
 double battery_mAh = BATTERYCAPACITY; // milliamp-hours (mAh)
 double battery_percent = BATTERYINITIALCHARGE;  // state-of-charge (percent)
 
@@ -39,9 +42,9 @@ void setup()
   pinMode(POL,INPUT);
   pinMode(CLR,OUTPUT);
   digitalWrite(CLR,HIGH);
-  pinMode(LED,OUTPUT);
-  digitalWrite(LED,LOW);
   pinMode(button, INPUT_PULLUP);
+
+  lcd.init();                      // initialize the lcd 
 
   // Enable serial output:
   Serial.begin(9600);
@@ -52,57 +55,72 @@ void setup()
 }
 
 
-
-
-
-
 void loop()
 {
-  static long int time = 0, lasttime;
-  double current;
-  boolean polarity;
   int buttonState = digitalRead(button);
-
-  if (buttonState)
-  {
-    resetCapacity();
-  }
-
-  if (digitalRead(INT)==0)            // INT has gone low
-  {
-    // Determine delay since last interrupt (for mA calculation)
-    // Note that first interrupt will be incorrect (no previous time!)
-    lasttime = time;
-    time = micros();  // micros(): returns the number of microseconds since the Arduino board began running the current program.
-
-    polarity = digitalRead(POL);      // Get the polarity value
-    if (polarity)                     // high = charging
-    {
-      battery_mAh += ah_quanta;
-      battery_percent += percent_quanta;
-    }
-    else                              // low = discharging
-    {
-      battery_mAh -= ah_quanta;
-      battery_percent -= percent_quanta;
-    }
-
-    current = calculateCurrent(time, lasttime)
+  while (buttonState == 0){
+    static long int time = 0, lasttime;
+    double current;
+    boolean polarity;
+    
   
-    // If charging, we'll set mA negative (optional)    
-    if (polarity) mA = mA * -1.0;
-
-    clearInterupt();
-
-    printStatus();
+    if (buttonState)
+    {
+      resetCapacity();
+      break;
+    }
+  
+    if (digitalRead(INT)==0)            // INT has gone low
+    {
+      // Determine delay since last interrupt (for mA calculation)
+      // Note that first interrupt will be incorrect (no previous time!)
+      lasttime = time;
+      time = micros();  // micros(): returns the number of microseconds since the Arduino board began running the current program.
+  
+      polarity = digitalRead(POL);      // Get the polarity value
+      if (polarity)                     // high = charging
+      {
+        battery_mAh += ah_quanta;
+        battery_percent += percent_quanta;
+      }
+      else                              // low = discharging
+      {
+        battery_mAh -= ah_quanta;
+        battery_percent -= percent_quanta;
+      }
+  
+      current = calculateCurrent(time, lasttime);
+    
+      // If charging, we'll set mA negative (optional)    
+      if (polarity) current = current * -1.0;
+  
+      clearInterupt();
+  
+      printStatus(battery_percent, current);
+      // Print a message to the LCD.
+      lcd.backlight();
+      String batPerc = String(battery_percent);
+      String percentage = "% ";
+      String curr = String(current);
+      String miliA = " mA";
+      String displayString = batPerc + percentage + curr + miliA;
+      lcd.print(displayString);
+    }
   }
+}
+
+
+void resetCapacity()
+{
+  double battery_mAh = BATTERYCAPACITY; // milliamp-hours (mAh)
+  double battery_percent = 100.0;  // state-of-charge (percent)
 }
 
 
 double calculateCurrent(long int time, long int lasttime)   // Calculate current from time delay
 {
-  mA = 614.4/((time-lasttime)/1000000.0);
-  return mA
+  double current = 614.4/((time-lasttime)/1000000.0);
+  return current;
 }
 
 
@@ -114,14 +132,11 @@ void clearInterupt()
 }
 
 
-void printStatus()  // Print out the current battery status
+void printStatus(double battery_perc, double current)  // Print out the current battery status
 {
-  Serial.print("mAh: ");
-  Serial.print(battery_mAh);
-  Serial.print(" soc: ");
-  Serial.print(battery_percent);
-  Serial.print("% time: ");
-  Serial.print((time-lasttime)/1000000.0);
-  Serial.print("s mA: ");
-  Serial.println(mA);
+  Serial.print(battery_perc);
+  Serial.print("% current: ");
+  Serial.print(current);
+  Serial.println("mA: ");
+  
 }
