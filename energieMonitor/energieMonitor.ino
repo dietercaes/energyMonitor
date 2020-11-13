@@ -13,7 +13,7 @@ SCL to A5
 GND to GND
 VCC to 5V
 */
-#include <Wire.h> 
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
 #define INT 3
@@ -23,7 +23,7 @@ VCC to 5V
 LiquidCrystal_I2C lcd(0x20,16,2);  // set the LCD address to 0x20 for a 16 chars and 2 line display
 
 // Change the following line to match your battery capacity in mAh.
-double BATTERYCAPACITY = 1000.0;
+double BATTERYCAPACITY = 8000.0;
 // Change the following line to the percentage of charge your battery has at the start.
 double BATTERYINITIALCHARGE = 100.0;
 
@@ -119,7 +119,7 @@ void resetCapacity()
 
 double calculateCurrent(long int time, long int lasttime)   // Calculate current from time delay
 {
-  double current = 614.4/((time-lasttime)/1000000.0);
+  double current = 614.4/((time-lasttime)/100000.0);
   return current;
 }
 
@@ -138,5 +138,5 @@ void printStatus(double battery_perc, double current)  // Print out the current 
   Serial.print("% current: ");
   Serial.print(current);
   Serial.println("mA: ");
-  
+  delay(100);
 }
